@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "aegis-security"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI Environment Guardian & Integrity Shield — Supply chain security for developers and AI agents"
 readme = "README.md"
 license = { text = "MIT" }
@@ -12,6 +12,7 @@ requires-python = ">=3.11"
 authors = [
     { name = "iafiscal", email = "info@iafiscal.es" },
 ]
+keywords = ["security", "supply-chain", "ai-agent", "typosquatting", "slopsquatting"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -19,6 +20,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Rust",
     "Topic :: Security",
     "Topic :: Software Development :: Build Tools",

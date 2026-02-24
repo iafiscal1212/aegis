@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -43,6 +43,28 @@ jobs:
         run: ruff check python/ tests/
       - name: Test
         run: pytest --cov=aegis tests/python/
+
+  pure-python:
+    name: Pure Python (no Rust)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install without Rust
+        run: |
+          pip install click>=8.1 rich>=13.0 httpx>=0.27 pyyaml>=6.0
+          pip install pytest>=8.0 pytest-cov>=5.0
+          pip install -e "." --no-build-isolation 2>/dev/null || true
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/python"
+      - name: Test pure Python fallbacks
+        env:
+          PYTHONPATH: python
+        run: pytest tests/python/ -k "not rust"
 
   build-wheels:
     name: Build Wheels

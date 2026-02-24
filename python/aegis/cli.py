@@ -227,6 +227,7 @@ def check_hook():
       - block  → exit 0, JSON with permissionDecision: "deny"
     """
     from aegis.hooks.claude import parse_hook_payload
+    from aegis.monitor.destructive import check_destructive_command
     from aegis.monitor.terminal import check_install_command
 
     try:
@@ -241,6 +242,22 @@ def check_hook():
         # Not a Bash tool call → pass through
         sys.exit(0)
 
+    # --- Destructive command check (always ask, never deny) ---
+    destructive = check_destructive_command(command)
+    if destructive is not None:
+        level_label = "CRITICAL" if destructive["level"] == "critical" else "WARNING"
+        output = {
+            "hookSpecificOutput": {
+                "permissionDecision": "ask",
+                "permissionDecisionReason": (
+                    f"AEGIS [{level_label}]: {destructive['reason']}"
+                ),
+            }
+        }
+        print(json.dumps(output))
+        return
+
+    # --- Install command check (typosquatting / slopsquatting / OSV) ---
     result = check_install_command(command, forced_agent="claude-code")
 
     if result["action"] == "block":
