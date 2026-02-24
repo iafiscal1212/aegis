@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "AEGIS Browser Guardian",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "AI Environment Guardian & Integrity Shield — Protects against malvertising, scareware, and malicious downloads.",
+    "description": "Extension description"
+  }
+}

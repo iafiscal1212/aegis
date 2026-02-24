@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AEGIS Browser Guardian</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-brand">
+        <img src="../icons/icon48.png" alt="AEGIS" class="header-icon">
+        <div>
+          <h1>AEGIS</h1>
+          <span class="header-sub">Browser Guardian</span>
+        </div>
+      </div>
+      <label class="toggle" title="Enable/Disable protection">
+        <input type="checkbox" id="toggle-enabled" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </header>
+
+    <!-- Current Page Status -->
+    <section class="status-section" id="page-status">
+      <div class="status-icon status-safe" id="status-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="status-text">
+        <span class="status-label" id="status-label">Page is safe</span>
+        <span class="status-domain" id="status-domain">—</span>
+      </div>
+    </section>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-number" id="stat-blocked">0</span>
+        <span class="stat-label">Blocked</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number" id="stat-warned">0</span>
+        <span class="stat-label">Warnings</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number" id="stat-downloads">0</span>
+        <span class="stat-label">Downloads Checked</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number" id="stat-scareware">0</span>
+        <span class="stat-label">Scareware</span>
+      </div>
+    </section>
+
+    <!-- Protection Toggles -->
+    <section class="toggles-section">
+      <h2>Protection</h2>
+      <div class="toggle-row">
+        <span>Block malvertising</span>
+        <label class="toggle small">
+          <input type="checkbox" id="toggle-malvertising" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span>Block scareware</span>
+        <label class="toggle small">
+          <input type="checkbox" id="toggle-scareware" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span>Check downloads</span>
+        <label class="toggle small">
+          <input type="checkbox" id="toggle-downloads" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span>Verify software URLs</span>
+        <label class="toggle small">
+          <input type="checkbox" id="toggle-verify" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span>Notifications</span>
+        <label class="toggle small">
+          <input type="checkbox" id="toggle-notifications" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- URL Check -->
+    <section class="url-check-section">
+      <h2>Check a URL</h2>
+      <div class="url-input-row">
+        <input type="text" id="url-input" placeholder="https://example.com" spellcheck="false">
+        <button id="url-check-btn" title="Check URL">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="url-result" id="url-result" style="display:none"></div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="#" id="open-options">Settings</a>
+      <span class="footer-sep">&middot;</span>
+      <span class="footer-version">v0.1.0</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

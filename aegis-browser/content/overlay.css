@@ -1,0 +1,201 @@
+/* AEGIS Browser Guardian — Warning Overlay Styles */
+
+#aegis-warning-overlay {
+  all: initial;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.aegis-overlay-backdrop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.aegis-overlay-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  max-width: 560px;
+  width: 100%;
+  overflow: hidden;
+  animation: aegis-slide-up 0.3s ease-out;
+}
+
+@keyframes aegis-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.aegis-overlay-header {
+  background: linear-gradient(135deg, #1e40af, #2563eb);
+  color: white;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.aegis-shield-icon {
+  flex-shrink: 0;
+}
+
+.aegis-overlay-header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.aegis-overlay-body {
+  padding: 24px 28px;
+}
+
+.aegis-overlay-body h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.aegis-overlay-body p {
+  margin: 0 0 16px;
+  color: #475569;
+}
+
+.aegis-indicators {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.aegis-indicators h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aegis-indicators ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aegis-indicators li {
+  padding: 6px 0;
+  font-size: 13px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.aegis-indicators li:last-child {
+  border-bottom: none;
+}
+
+.aegis-tag {
+  display: inline-block;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.aegis-warning-text {
+  background: #fef2f2;
+  border-left: 4px solid #dc2626;
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  font-size: 14px;
+  color: #7f1d1d;
+  margin-bottom: 0 !important;
+}
+
+.aegis-overlay-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 28px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.aegis-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.aegis-btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.aegis-btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.aegis-btn-secondary {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.aegis-btn-secondary:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .aegis-overlay-card {
+    max-width: 100%;
+  }
+
+  .aegis-overlay-header {
+    padding: 16px 20px;
+  }
+
+  .aegis-overlay-body {
+    padding: 16px 20px;
+  }
+
+  .aegis-overlay-actions {
+    flex-direction: column;
+    padding: 16px 20px;
+  }
+}
