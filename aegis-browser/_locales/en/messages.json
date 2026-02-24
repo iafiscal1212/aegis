@@ -4,7 +4,7 @@
     "description": "Extension name"
   },
   "extDescription": {
-    "message": "AI Environment Guardian & Integrity Shield — Protects against malvertising, scareware, and malicious downloads.",
+    "message": "AI firewall for AI agents — Protects your browser against malvertising, scareware, suspicious copy-paste commands, and malicious downloads. Part of the AEGIS security suite.",
     "description": "Extension description"
   }
 }
