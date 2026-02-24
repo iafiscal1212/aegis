@@ -67,9 +67,20 @@ class AegisDB:
                 updated_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS registry_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                package_name TEXT NOT NULL,
+                ecosystem TEXT NOT NULL,
+                exists_in_registry INTEGER NOT NULL,
+                checked_at TEXT NOT NULL,
+                UNIQUE(package_name, ecosystem)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_decisions_timestamp ON decisions(timestamp);
             CREATE INDEX IF NOT EXISTS idx_decisions_package ON decisions(package_name);
+            CREATE INDEX IF NOT EXISTS idx_decisions_agent ON decisions(agent_name);
             CREATE INDEX IF NOT EXISTS idx_packages_name ON packages(name, ecosystem);
+            CREATE INDEX IF NOT EXISTS idx_registry_cache ON registry_cache(package_name, ecosystem);
         """)
         conn.commit()
         conn.close()
@@ -152,3 +163,63 @@ class AegisDB:
         dec_count = conn.execute("SELECT COUNT(*) FROM decisions").fetchone()[0]
         conn.close()
         return {"packages": pkg_count, "decisions": dec_count}
+
+    def get_registry_cache(self, name: str, ecosystem: str, ttl: int = 3600) -> bool | None:
+        """Get cached registry check result. Returns None if miss or expired."""
+        conn = self._connect()
+        row = conn.execute(
+            """SELECT exists_in_registry, checked_at FROM registry_cache
+               WHERE package_name = ? AND ecosystem = ?""",
+            (name, ecosystem),
+        ).fetchone()
+        conn.close()
+        if row is None:
+            return None
+        checked_at = datetime.fromisoformat(row["checked_at"])
+        age = (datetime.now(timezone.utc) - checked_at).total_seconds()
+        if age > ttl:
+            return None
+        return bool(row["exists_in_registry"])
+
+    def set_registry_cache(self, name: str, ecosystem: str, exists: bool):
+        """Store registry check result with UPSERT."""
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        conn.execute(
+            """INSERT INTO registry_cache (package_name, ecosystem, exists_in_registry, checked_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(package_name, ecosystem) DO UPDATE SET
+                   exists_in_registry = excluded.exists_in_registry,
+                   checked_at = excluded.checked_at""",
+            (name, ecosystem, int(exists), now),
+        )
+        conn.commit()
+        conn.close()
+
+    def get_agent_decisions(self, agent_name: str, limit: int = 50) -> list[dict]:
+        """Get decisions filtered by agent name."""
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT * FROM decisions WHERE agent_name = ? ORDER BY timestamp DESC LIMIT ?",
+            (agent_name, limit),
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def get_agent_stats(self) -> list[dict]:
+        """Get statistics grouped by agent_name."""
+        conn = self._connect()
+        rows = conn.execute(
+            """SELECT
+                   agent_name,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN action = 'allow' THEN 1 ELSE 0 END) as allowed,
+                   SUM(CASE WHEN action = 'warn' THEN 1 ELSE 0 END) as warned,
+                   SUM(CASE WHEN action = 'block' THEN 1 ELSE 0 END) as blocked
+               FROM decisions
+               WHERE agent_name IS NOT NULL
+               GROUP BY agent_name
+               ORDER BY total DESC""",
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]

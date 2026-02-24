@@ -131,9 +131,9 @@ class TestEscalationWithAgent:
     @patch("aegis.monitor.terminal._check_osv", return_value=[])
     @patch("aegis.monitor.terminal.detect_ai_agent", return_value="devin")
     def test_typo_block_with_devin(self, mock_agent, mock_osv, mock_exists):
-        """Devin (high-risk agent) → typosquats get blocked."""
+        """Devin (high-risk agent) → typosquats get blocked (agent threshold=1)."""
         from aegis.monitor.terminal import check_install_command
-        result = check_install_command("pip install reqeusts")
+        result = check_install_command("pip install requets")
         assert result["action"] == "block"
         assert result["agent"] == "devin"
 
@@ -141,20 +141,20 @@ class TestEscalationWithAgent:
     @patch("aegis.monitor.terminal._check_osv", return_value=[])
     @patch("aegis.monitor.terminal.detect_ai_agent", return_value="cursor")
     def test_typo_block_with_cursor(self, mock_agent, mock_osv, mock_exists):
-        """Cursor (elevated-risk agent) → typosquats get blocked."""
+        """Cursor (elevated-risk agent) → typosquats get blocked (agent threshold=1)."""
         from aegis.monitor.terminal import check_install_command
-        result = check_install_command("pip install reqeusts")
+        result = check_install_command("pip install requets")
         assert result["action"] == "block"
         assert result["agent"] == "cursor"
 
     @patch("aegis.monitor.terminal._check_package_exists", return_value=None)
     @patch("aegis.monitor.terminal._check_osv", return_value=[])
     @patch("aegis.monitor.terminal.detect_ai_agent", return_value="copilot")
-    def test_typo_warn_with_copilot(self, mock_agent, mock_osv, mock_exists):
-        """Copilot (standard-risk agent) → typosquats get warning."""
+    def test_typo_block_with_copilot(self, mock_agent, mock_osv, mock_exists):
+        """Copilot (standard-risk) in strict agent_mode → typosquats get blocked."""
         from aegis.monitor.terminal import check_install_command
-        result = check_install_command("pip install reqeusts")
-        assert result["action"] == "warn"
+        result = check_install_command("pip install requets")
+        assert result["action"] == "block"
 
     @patch("aegis.monitor.terminal._check_package_exists", return_value=False)
     @patch("aegis.monitor.terminal._check_osv", return_value=[])
@@ -171,9 +171,9 @@ class TestEscalationWithAgent:
     @patch("aegis.monitor.terminal._check_osv", return_value=[])
     @patch("aegis.monitor.terminal.detect_ai_agent", return_value="ollama")
     def test_typo_block_with_ollama(self, mock_agent, mock_osv, mock_exists):
-        """Ollama (elevated) → typosquats get blocked."""
+        """Ollama (elevated) → typosquats get blocked (agent threshold=1)."""
         from aegis.monitor.terminal import check_install_command
-        result = check_install_command("pip install reqeusts")
+        result = check_install_command("pip install requets")
         assert result["action"] == "block"
         assert result["agent"] == "ollama"
 

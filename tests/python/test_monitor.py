@@ -96,7 +96,8 @@ class TestCheckInstallCommand:
 
     @patch("aegis.monitor.terminal._check_package_exists", return_value=None)
     @patch("aegis.monitor.terminal._check_osv", return_value=[])
-    def test_typo_detected(self, mock_osv, mock_exists):
+    @patch("aegis.monitor.terminal.detect_ai_agent", return_value=None)
+    def test_typo_detected(self, mock_agent, mock_osv, mock_exists):
         result = check_install_command("pip install reqeusts")
         assert result["action"] in ("warn", "block")
         assert len(result["alerts"]) > 0

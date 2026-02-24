@@ -7,8 +7,12 @@ from aegis.db.models import AegisDB
 from aegis.monitor.process import detect_ai_agent, get_agent_risk_level
 
 
-def check_install_command(command: str) -> dict:
+def check_install_command(command: str, forced_agent: str | None = None) -> dict:
     """Check a package install command and return a decision.
+
+    Args:
+        command: The install command string (e.g. "pip install requests").
+        forced_agent: Override agent detection (used by hooks like Claude Code).
 
     Returns:
         dict with keys:
@@ -31,16 +35,45 @@ def check_install_command(command: str) -> dict:
     if not config.ecosystems.get(ecosystem, True):
         return {"action": "allow", "alerts": [], "agent": None}
 
-    # Detect AI agent context (universal detection)
-    agent_name = detect_ai_agent()
+    # Detect AI agent context — forced_agent overrides auto-detection
+    agent_name = forced_agent or detect_ai_agent()
+    is_agent = agent_name is not None
     risk_level = get_agent_risk_level(agent_name)
-    # high-risk agents → block suspicious, elevated → warn→block, standard → warn
-    escalate = risk_level in ("high", "elevated")
+
+    # Agent blocklist — block everything from this agent
+    if is_agent and agent_name.lower() in [a.lower() for a in config.agent_blocklist]:
+        for pkg in packages:
+            alerts.append({
+                "level": "block",
+                "package": pkg["name"],
+                "reason": f"Agent '{agent_name}' is in agent blocklist",
+                "suggestion": "Remove from agent.blocklist in ~/.aegis/config.yml to allow",
+                "agent": agent_name,
+            })
+        _log_decisions(parsed, alerts, agent_name)
+        return {"action": "block", "alerts": alerts, "agent": agent_name}
+
+    # Agent allowlist — no escalation for trusted agents
+    agent_trusted = is_agent and agent_name.lower() in [a.lower() for a in config.agent_allowlist]
+
+    # Determine escalation based on agent_mode
+    if is_agent and not agent_trusted:
+        if config.agent_mode == "strict":
+            escalate = True
+        elif config.agent_mode == "moderate":
+            escalate = risk_level in ("high", "elevated")
+        else:  # permissive
+            escalate = risk_level == "high"
+    else:
+        escalate = risk_level in ("high", "elevated")
+
+    # Choose typosquat threshold: stricter for agents
+    typo_threshold = config.agent_typosquat_threshold if is_agent else config.typosquat_threshold
 
     for pkg in packages:
         pkg_name = pkg["name"]
 
-        # Check blocklist
+        # Check package blocklist
         if pkg_name.lower() in [b.lower() for b in config.blocklist]:
             alerts.append({
                 "level": "block",
@@ -51,13 +84,13 @@ def check_install_command(command: str) -> dict:
             })
             continue
 
-        # Check allowlist
+        # Check package allowlist
         if pkg_name.lower() in [a.lower() for a in config.allowlist]:
             continue
 
-        # Typosquatting check
+        # Typosquatting check (with agent-aware threshold)
         if config.typosquat_enabled:
-            typo_result = _check_typosquat(pkg_name, ecosystem, config.typosquat_threshold)
+            typo_result = _check_typosquat(pkg_name, ecosystem, typo_threshold)
             if typo_result and typo_result["is_suspect"]:
                 level = "block" if escalate else "warn"
                 closest = typo_result["closest_match"]
@@ -71,17 +104,26 @@ def check_install_command(command: str) -> dict:
                 })
                 continue
 
-        # Check if package exists via API (async in future)
-        existence = _check_package_exists(pkg_name, ecosystem)
+        # Slopsquatting check — always use cache for agents
+        if is_agent and config.slopsquat_check:
+            existence = _check_package_exists_cached(pkg_name, ecosystem, config)
+        else:
+            existence = _check_package_exists(pkg_name, ecosystem)
+
         if existence is not None and not existence:
-            level = "block" if escalate else "warn"
-            agent_hint = ""
-            if agent_name:
-                agent_hint = f" Agent '{agent_name}' may have hallucinated this name."
+            if is_agent:
+                # Agents always get blocked for non-existent packages
+                level = "block"
+                reason = f"Slopsquatting detected: '{pkg_name}' does not exist in {ecosystem} registry"
+                agent_hint = f" Agent '{agent_name}' may have hallucinated this package name."
+            else:
+                level = "block" if escalate else "warn"
+                reason = f"Package '{pkg_name}' does not exist in {ecosystem} registry"
+                agent_hint = ""
             alerts.append({
                 "level": level,
                 "package": pkg_name,
-                "reason": f"Package '{pkg_name}' does not exist in {ecosystem} registry",
+                "reason": reason,
                 "suggestion": f"Slopsquatting risk.{agent_hint}",
                 "agent": agent_name,
             })
@@ -243,6 +285,21 @@ def _check_package_exists(name: str, ecosystem: str) -> bool | None:
         return resp.status_code == 200
     except Exception:
         return None  # Can't check — don't block
+
+
+def _check_package_exists_cached(name: str, ecosystem: str, config: AegisConfig) -> bool | None:
+    """Check registry with SQLite cache for agent slopsquatting detection."""
+    try:
+        db = AegisDB()
+        cached = db.get_registry_cache(name, ecosystem, ttl=config.registry_cache_ttl)
+        if cached is not None:
+            return cached
+        result = _check_package_exists(name, ecosystem)
+        if result is not None:
+            db.set_registry_cache(name, ecosystem, result)
+        return result
+    except Exception:
+        return _check_package_exists(name, ecosystem)
 
 
 def _check_osv(name: str, ecosystem: str) -> list[dict]:

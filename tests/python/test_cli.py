@@ -74,7 +74,8 @@ def test_check_safe_package(mock_osv, mock_exists, runner, temp_aegis_dir):
 
 @patch("aegis.monitor.terminal._check_package_exists", return_value=None)
 @patch("aegis.monitor.terminal._check_osv", return_value=[])
-def test_check_typosquat(mock_osv, mock_exists, runner, temp_aegis_dir):
+@patch("aegis.monitor.terminal.detect_ai_agent", return_value=None)
+def test_check_typosquat(mock_agent, mock_osv, mock_exists, runner, temp_aegis_dir):
     """Check a typosquatted package is caught."""
     runner.invoke(main, ["init"])
     result = runner.invoke(main, ["check", "pip", "install", "reqeusts"])

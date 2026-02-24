@@ -30,6 +30,13 @@ class AegisConfig:
     notifications_desktop: bool = False
     allowlist: list[str] = field(default_factory=list)
     blocklist: list[str] = field(default_factory=list)
+    # Agent-specific settings (Fase 3)
+    agent_mode: str = "strict"  # strict | moderate | permissive
+    slopsquat_check: bool = True
+    agent_typosquat_threshold: int = 1
+    agent_blocklist: list[str] = field(default_factory=list)
+    agent_allowlist: list[str] = field(default_factory=list)
+    registry_cache_ttl: int = 3600
     config_path: Path = field(default_factory=lambda: get_config_dir() / "config.yml")
 
     @classmethod
@@ -81,6 +88,15 @@ class AegisConfig:
         config.allowlist = data.get("allowlist", [])
         config.blocklist = data.get("blocklist", [])
 
+        agent = data.get("agent", {})
+        if agent:
+            config.agent_mode = agent.get("mode", config.agent_mode)
+            config.slopsquat_check = agent.get("slopsquat_check", config.slopsquat_check)
+            config.agent_typosquat_threshold = agent.get("typosquat_threshold", config.agent_typosquat_threshold)
+            config.agent_blocklist = agent.get("blocklist", config.agent_blocklist)
+            config.agent_allowlist = agent.get("allowlist", config.agent_allowlist)
+            config.registry_cache_ttl = agent.get("registry_cache_ttl", config.registry_cache_ttl)
+
         return config
 
     def to_dict(self) -> dict:
@@ -103,6 +119,14 @@ class AegisConfig:
             },
             "allowlist": self.allowlist,
             "blocklist": self.blocklist,
+            "agent": {
+                "mode": self.agent_mode,
+                "slopsquat_check": self.slopsquat_check,
+                "typosquat_threshold": self.agent_typosquat_threshold,
+                "blocklist": self.agent_blocklist,
+                "allowlist": self.agent_allowlist,
+                "registry_cache_ttl": self.registry_cache_ttl,
+            },
         }
 
     def save(self):

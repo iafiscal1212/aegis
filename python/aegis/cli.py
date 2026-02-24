@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -211,6 +212,191 @@ def status():
         stats = db.get_stats()
         console.print(f"\n  Packages analyzed: {stats['packages']}")
         console.print(f"  Decisions logged:  {stats['decisions']}")
+
+
+@main.command("check-hook")
+def check_hook():
+    """Check a Claude Code hook payload from stdin.
+
+    Reads JSON from stdin (PreToolUse payload), extracts the Bash command,
+    and runs AEGIS checks with forced_agent="claude-code".
+
+    Protocol:
+      - allow  → exit 0, no output
+      - warn   → exit 0, JSON with permissionDecision: "ask"
+      - block  → exit 0, JSON with permissionDecision: "deny"
+    """
+    from aegis.hooks.claude import parse_hook_payload
+    from aegis.monitor.terminal import check_install_command
+
+    try:
+        raw = sys.stdin.read()
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        # Invalid JSON → pass through (allow)
+        sys.exit(0)
+
+    command = parse_hook_payload(payload)
+    if command is None:
+        # Not a Bash tool call → pass through
+        sys.exit(0)
+
+    result = check_install_command(command, forced_agent="claude-code")
+
+    if result["action"] == "block":
+        reasons = "; ".join(a.get("reason", "") for a in result["alerts"] if a.get("reason"))
+        output = {
+            "hookSpecificOutput": {
+                "permissionDecision": "deny",
+                "permissionDecisionReason": f"AEGIS: {reasons}",
+            }
+        }
+        print(json.dumps(output))
+    elif result["action"] == "warn":
+        reasons = "; ".join(a.get("reason", "") for a in result["alerts"] if a.get("reason"))
+        output = {
+            "hookSpecificOutput": {
+                "permissionDecision": "ask",
+                "permissionDecisionReason": f"AEGIS: {reasons}",
+            }
+        }
+        print(json.dumps(output))
+    # action == "allow" → exit 0, no output
+
+
+@main.command("agent-log")
+@click.option("--agent", default=None, help="Filter by agent name")
+@click.option("--stats", is_flag=True, help="Show summary statistics by agent")
+@click.option("--limit", default=50, help="Number of records to show")
+def agent_log(agent: str | None, stats: bool, limit: int):
+    """View agent activity dashboard."""
+    db = AegisDB()
+
+    if stats:
+        rows = db.get_agent_stats()
+        if not rows:
+            console.print("[dim]No agent activity recorded yet.[/dim]")
+            return
+
+        table = Table(title="Agent Activity Summary")
+        table.add_column("Agent")
+        table.add_column("Total", justify="right")
+        table.add_column("Allowed", justify="right", style="green")
+        table.add_column("Warned", justify="right", style="yellow")
+        table.add_column("Blocked", justify="right", style="red")
+
+        for r in rows:
+            table.add_row(
+                r["agent_name"] or "(unknown)",
+                str(r["total"]),
+                str(r["allowed"]),
+                str(r["warned"]),
+                str(r["blocked"]),
+            )
+        console.print(table)
+        return
+
+    if agent:
+        decisions = db.get_agent_decisions(agent, limit=limit)
+    else:
+        decisions = db.get_recent_decisions(limit=limit)
+
+    if not decisions:
+        console.print("[dim]No decisions recorded yet.[/dim]")
+        return
+
+    table = Table(title=f"Agent Log{f' ({agent})' if agent else ''}")
+    table.add_column("Time")
+    table.add_column("Agent")
+    table.add_column("Package")
+    table.add_column("Ecosystem")
+    table.add_column("Action", style="bold")
+    table.add_column("Reason")
+
+    action_colors = {"allow": "green", "warn": "yellow", "block": "red"}
+
+    for d in decisions:
+        action = d["action"]
+        color = action_colors.get(action, "")
+        table.add_row(
+            d["timestamp"],
+            d.get("agent_name") or "-",
+            d["package_name"],
+            d["ecosystem"],
+            f"[{color}]{action.upper()}[/]",
+            d.get("reason", ""),
+        )
+
+    console.print(table)
+
+
+@main.group()
+def hook():
+    """Manage AEGIS hooks for AI agents and shells."""
+
+
+@hook.command("install")
+@click.argument("target", type=click.Choice(["claude", "shell", "browser"]))
+def hook_install(target: str):
+    """Install an AEGIS hook.
+
+    \b
+    Targets:
+      claude  — Install PreToolUse hook in ~/.claude/settings.json
+      shell   — Install shell_hook.sh in ~/.aegis/
+      browser — Install native messaging host for browser extension
+    """
+    if target == "claude":
+        from aegis.hooks.claude import install_hook
+        path = install_hook()
+        console.print(f"[green]Claude Code hook installed:[/green] {path}")
+    elif target == "shell":
+        from aegis.hooks.generic import install_shell_hook
+        path = install_shell_hook()
+        console.print(f"[green]Shell hook installed:[/green] {path}")
+        console.print(Panel(
+            f"[bold]Add to your .bashrc or .zshrc:[/bold]\n\n  source {path}\n",
+            title="Next step",
+            border_style="cyan",
+        ))
+    elif target == "browser":
+        from aegis.browser.native_host import install_native_host
+        path = install_native_host()
+        console.print(f"[green]Browser native host installed:[/green] {path}")
+
+
+@hook.command("status")
+def hook_status():
+    """Show which AEGIS hooks are installed."""
+    config_dir = get_config_dir()
+
+    # Claude Code hook
+    claude_settings = Path.home() / ".claude" / "settings.json"
+    claude_installed = False
+    if claude_settings.exists():
+        try:
+            settings = json.loads(claude_settings.read_text())
+            for entry in settings.get("hooks", {}).get("PreToolUse", []):
+                for h in entry.get("hooks", []):
+                    if h.get("command") == "aegis check-hook":
+                        claude_installed = True
+        except (json.JSONDecodeError, OSError):
+            pass
+    status = "[green]installed[/green]" if claude_installed else "[yellow]not installed[/yellow]"
+    console.print(f"  Claude Code: {status}")
+
+    # Shell hook
+    shell_hook = config_dir / "shell_hook.sh"
+    status = "[green]installed[/green]" if shell_hook.exists() else "[yellow]not installed[/yellow]"
+    console.print(f"  Shell hook:  {status}")
+
+    # Browser native host
+    native_host = config_dir / "native_host.json"
+    if not native_host.exists():
+        # Also check common native messaging host locations
+        native_host = Path.home() / ".config" / "google-chrome" / "NativeMessagingHosts" / "com.aegis.security.json"
+    status = "[green]installed[/green]" if native_host.exists() else "[yellow]not installed[/yellow]"
+    console.print(f"  Browser:     {status}")
 
 
 def _write_default_shell_hook(path: Path):
