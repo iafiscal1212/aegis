@@ -4,10 +4,10 @@ build-backend = "maturin"
 
 [project]
 name = "aegis-security"
-version = "0.2.0"
+version = "0.2.1"
 description = "AI Environment Guardian & Integrity Shield — Supply chain security for developers and AI agents"
 readme = "README.md"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 requires-python = ">=3.11"
 authors = [
     { name = "iafiscal", email = "info@iafiscal.es" },
