@@ -1,7 +1,6 @@
 # Rust
 /target/
 **/*.rs.bk
-Cargo.lock
 
 # Python
 __pycache__/
@@ -28,6 +27,12 @@ ENV/
 # AEGIS local data
 .aegis/
 
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+
 # OS
 .DS_Store
 Thumbs.db
@@ -36,6 +41,9 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Benchmarks
+.benchmarks/
 
 # Maturin
 *.whl
