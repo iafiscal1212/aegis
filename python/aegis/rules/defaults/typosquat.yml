@@ -1,0 +1,39 @@
+# AEGIS — Typosquatting rules
+# Known typosquatted package names and patterns
+
+- name: known_typosquats
+  type: blocklist
+  severity: critical
+  description: "Known typosquatted package"
+  names:
+    # Python
+    - colourama      # colorama
+    - reqeusts       # requests
+    - requets        # requests
+    - reequests      # requests
+    - python-dateutils  # python-dateutil
+    - numppy         # numpy
+    - pandsa         # pandas
+    - flaask         # flask
+    - djnago         # django
+    - djago          # django
+    - urlib3         # urllib3
+    - setuptool      # setuptools
+    - pyyml          # pyyaml
+    - crytography    # cryptography
+    # Node
+    - exprss         # express
+    - expresss       # express
+    - lodahs         # lodash
+    - axois          # axios
+    - axio           # axios
+
+- name: suspicious_prefixes
+  type: pattern
+  severity: medium
+  description: "Suspicious package name pattern"
+  patterns:
+    - "^(python|py|pip|node|npm|js)-[a-z]+-[a-z]+$"
+    - "^[a-z]+-official$"
+    - "^[a-z]+-free$"
+    - "^free-[a-z]+$"

@@ -1,0 +1,22 @@
+[workspace]
+members = [
+    "crates/aegis-core",
+    "crates/aegis-python",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/iafiscal1212/aegis"
+
+[workspace.dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+regex = "1"
+strsim = "0.11"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+rayon = "1.10"
+thiserror = "2"

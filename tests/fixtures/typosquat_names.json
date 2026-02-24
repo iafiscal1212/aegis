@@ -1,0 +1,26 @@
+{
+    "known_typosquats": {
+        "python": [
+            {"typo": "reqeusts", "real": "requests"},
+            {"typo": "requets", "real": "requests"},
+            {"typo": "colourama", "real": "colorama"},
+            {"typo": "numppy", "real": "numpy"},
+            {"typo": "pandsa", "real": "pandas"},
+            {"typo": "flaask", "real": "flask"},
+            {"typo": "djnago", "real": "django"},
+            {"typo": "python-requests", "real": "requests"},
+            {"typo": "flask-dev", "real": "flask"}
+        ],
+        "node": [
+            {"typo": "expresss", "real": "express"},
+            {"typo": "exprss", "real": "express"},
+            {"typo": "lodahs", "real": "lodash"},
+            {"typo": "axois", "real": "axios"},
+            {"typo": "react-dev", "real": "react"}
+        ]
+    },
+    "safe_packages": {
+        "python": ["requests", "numpy", "pandas", "flask", "django"],
+        "node": ["express", "react", "lodash", "axios", "typescript"]
+    }
+}

@@ -1,0 +1,13 @@
+[package]
+name = "aegis-python"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "aegis_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+aegis-core = { path = "../aegis-core" }
+pyo3 = { workspace = true }

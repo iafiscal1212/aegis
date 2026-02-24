@@ -1,0 +1,11 @@
+# AEGIS — Behavioral rules
+# Rules based on runtime behavior patterns
+
+- name: single_maintainer_new
+  type: metadata
+  severity: low
+  description: "Single maintainer on a new package"
+  condition:
+    field: maintainer_count
+    op: eq
+    value: 1

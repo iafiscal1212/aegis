@@ -1,0 +1,26 @@
+# AEGIS — Lifecycle script rules
+# Rules for detecting malicious install/build scripts
+
+- name: dangerous_postinstall
+  type: pattern
+  severity: high
+  description: "Package name associated with dangerous lifecycle scripts"
+  patterns: []
+
+- name: new_package_check
+  type: metadata
+  severity: medium
+  description: "Package is very new (less than 7 days old)"
+  condition:
+    field: age_days
+    op: lt
+    value: 7
+
+- name: zero_downloads
+  type: metadata
+  severity: medium
+  description: "Package has zero downloads"
+  condition:
+    field: downloads_last_month
+    op: eq
+    value: 0

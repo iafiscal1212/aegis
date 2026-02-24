@@ -1,0 +1,65 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "aegis-security"
+version = "0.1.0"
+description = "AI Environment Guardian & Integrity Shield — Supply chain security for developers and AI agents"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [
+    { name = "iafiscal", email = "info@iafiscal.es" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Security",
+    "Topic :: Software Development :: Build Tools",
+]
+dependencies = [
+    "click>=8.1",
+    "rich>=13.0",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+aegis = "aegis.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/iafiscal1212/aegis"
+Repository = "https://github.com/iafiscal1212/aegis"
+Issues = "https://github.com/iafiscal1212/aegis/issues"
+
+[tool.maturin]
+python-source = "python"
+module-name = "aegis.aegis_core"
+features = ["pyo3/extension-module"]
+manifest-path = "crates/aegis-python/Cargo.toml"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+pythonpath = ["python"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "S", "B"]
+ignore = ["S603", "S607"]
