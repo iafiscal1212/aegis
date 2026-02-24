@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from aegis.config import AegisConfig
 from aegis.db.models import AegisDB
-from aegis.utils import is_ai_agent_context
+from aegis.monitor.process import detect_ai_agent, get_agent_risk_level
 
 
 def check_install_command(command: str) -> dict:
@@ -14,6 +14,7 @@ def check_install_command(command: str) -> dict:
         dict with keys:
             action: "allow" | "warn" | "block"
             alerts: list of alert dicts
+            agent: str | None — detected AI agent name
     """
     config = AegisConfig.load_or_create()
     alerts = []
@@ -21,16 +22,20 @@ def check_install_command(command: str) -> dict:
     # Try Rust core first, fall back to pure Python
     parsed = _parse_command(command)
     if parsed is None:
-        return {"action": "allow", "alerts": []}
+        return {"action": "allow", "alerts": [], "agent": None}
 
     ecosystem = parsed["ecosystem"]
     packages = parsed["packages"]
 
     # Check if ecosystem is enabled
     if not config.ecosystems.get(ecosystem, True):
-        return {"action": "allow", "alerts": []}
+        return {"action": "allow", "alerts": [], "agent": None}
 
-    ai_context = is_ai_agent_context()
+    # Detect AI agent context (universal detection)
+    agent_name = detect_ai_agent()
+    risk_level = get_agent_risk_level(agent_name)
+    # high-risk agents → block suspicious, elevated → warn→block, standard → warn
+    escalate = risk_level in ("high", "elevated")
 
     for pkg in packages:
         pkg_name = pkg["name"]
@@ -42,6 +47,7 @@ def check_install_command(command: str) -> dict:
                 "package": pkg_name,
                 "reason": "Package is in blocklist",
                 "suggestion": "Remove from blocklist in ~/.aegis/config.yml to allow",
+                "agent": agent_name,
             })
             continue
 
@@ -53,25 +59,31 @@ def check_install_command(command: str) -> dict:
         if config.typosquat_enabled:
             typo_result = _check_typosquat(pkg_name, ecosystem, config.typosquat_threshold)
             if typo_result and typo_result["is_suspect"]:
-                level = "block" if ai_context else "warn"
+                level = "block" if escalate else "warn"
                 closest = typo_result["closest_match"]
+                agent_hint = f" (detected agent: {agent_name})" if agent_name else ""
                 alerts.append({
                     "level": level,
                     "package": pkg_name,
                     "reason": typo_result.get("reason", f"Possible typosquat of '{closest}'"),
-                    "suggestion": f'Did you mean "{closest}"?',
+                    "suggestion": f'Did you mean "{closest}"?{agent_hint}',
+                    "agent": agent_name,
                 })
                 continue
 
         # Check if package exists via API (async in future)
         existence = _check_package_exists(pkg_name, ecosystem)
         if existence is not None and not existence:
-            level = "block" if ai_context else "warn"
+            level = "block" if escalate else "warn"
+            agent_hint = ""
+            if agent_name:
+                agent_hint = f" Agent '{agent_name}' may have hallucinated this name."
             alerts.append({
                 "level": level,
                 "package": pkg_name,
                 "reason": f"Package '{pkg_name}' does not exist in {ecosystem} registry",
-                "suggestion": "AI agents can hallucinate package names (slopsquatting)",
+                "suggestion": f"Slopsquatting risk.{agent_hint}",
+                "agent": agent_name,
             })
             continue
 
@@ -84,10 +96,11 @@ def check_install_command(command: str) -> dict:
                     "package": pkg_name,
                     "reason": f"{len(vulns)} known vulnerability(ies) found",
                     "suggestion": f"Check: https://osv.dev/list?q={pkg_name}",
+                    "agent": agent_name,
                 })
 
     # Log decisions
-    _log_decisions(parsed, alerts)
+    _log_decisions(parsed, alerts, agent_name)
 
     # Determine overall action
     if any(a["level"] == "block" for a in alerts):
@@ -97,7 +110,7 @@ def check_install_command(command: str) -> dict:
     else:
         action = "allow"
 
-    return {"action": action, "alerts": alerts}
+    return {"action": action, "alerts": alerts, "agent": agent_name}
 
 
 def _parse_command(command: str) -> dict | None:
@@ -258,7 +271,7 @@ def _check_osv(name: str, ecosystem: str) -> list[dict]:
     return []
 
 
-def _log_decisions(parsed: dict, alerts: list[dict]):
+def _log_decisions(parsed: dict, alerts: list[dict], agent_name: str | None = None):
     """Log decisions to the database."""
     try:
         db = AegisDB()
@@ -271,6 +284,7 @@ def _log_decisions(parsed: dict, alerts: list[dict]):
                         ecosystem=parsed["ecosystem"],
                         action=alert["level"],
                         reason=alert.get("reason", ""),
+                        agent_name=agent_name,
                     )
             else:
                 db.log_decision(
@@ -278,6 +292,7 @@ def _log_decisions(parsed: dict, alerts: list[dict]):
                     ecosystem=parsed["ecosystem"],
                     action="allow",
                     reason="No issues found",
+                    agent_name=agent_name,
                 )
     except Exception:
         pass  # Don't block installs if DB fails

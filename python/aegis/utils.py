@@ -2,22 +2,28 @@
 
 from __future__ import annotations
 
-import os
+from aegis.monitor.process import detect_ai_agent, get_agent_risk_level
 
 
 def is_ai_agent_context() -> bool:
-    """Detect if running inside an AI coding agent.
+    """Detect if running inside any AI coding agent."""
+    return detect_ai_agent() is not None
 
-    Checks for known environment variables set by AI tools.
+
+def get_ai_context() -> dict:
+    """Get full AI agent context information.
+
+    Returns dict with:
+        is_agent: bool
+        agent_name: str | None
+        risk_level: "none" | "standard" | "elevated" | "high"
     """
-    indicators = [
-        "CLAUDE_CODE",
-        "CURSOR_SESSION",
-        "AIDER_SESSION",
-        "COPILOT_AGENT",
-        "CONTINUE_SESSION",
-    ]
-    return any(os.environ.get(var) for var in indicators)
+    agent = detect_ai_agent()
+    return {
+        "is_agent": agent is not None,
+        "agent_name": agent,
+        "risk_level": get_agent_risk_level(agent),
+    }
 
 
 def normalize_ecosystem(manager: str) -> str:
