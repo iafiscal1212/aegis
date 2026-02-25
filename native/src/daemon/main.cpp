@@ -11,8 +11,10 @@
 #endif
 
 #include <sys/epoll.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/timerfd.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 #include <cstdio>
