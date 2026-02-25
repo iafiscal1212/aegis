@@ -1,0 +1,38 @@
+[Unit]
+Description=AEGIS Security Daemon - Supply Chain Protection with eBPF
+Documentation=https://github.com/iafiscal1212/aegis
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/aegisd --foreground
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+CapabilityBoundingSet=CAP_BPF CAP_SYS_ADMIN CAP_PERFMON CAP_NET_ADMIN
+AmbientCapabilities=CAP_BPF CAP_SYS_ADMIN CAP_PERFMON
+NoNewPrivileges=no
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/aegis /run/aegis /etc/aegis
+RuntimeDirectory=aegis
+StateDirectory=aegis
+ConfigurationDirectory=aegis
+
+# OOM protection
+OOMScoreAdjust=-1000
+
+# Resource limits
+LimitMEMLOCK=infinity
+LimitNOFILE=65536
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aegisd
+
+[Install]
+WantedBy=multi-user.target

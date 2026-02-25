@@ -1,3 +1,6 @@
-"""AEGIS — AI Environment Guardian & Integrity Shield."""
+"""AEGIS — AI Environment Guardian & Integrity Shield.
 
-__version__ = "0.2.1"
+v1.0: Kernel-level enforcement with eBPF LSM.
+"""
+
+__version__ = "1.0.0"

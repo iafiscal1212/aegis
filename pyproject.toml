@@ -4,17 +4,17 @@ build-backend = "maturin"
 
 [project]
 name = "aegis-security"
-version = "0.2.1"
-description = "AI Environment Guardian & Integrity Shield — Supply chain security for developers and AI agents"
+version = "1.0.0"
+description = "AI Environment Guardian & Integrity Shield — Kernel-level supply chain security with eBPF LSM"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 authors = [
     { name = "iafiscal", email = "info@iafiscal.es" },
 ]
-keywords = ["security", "supply-chain", "ai-agent", "typosquatting", "slopsquatting"]
+keywords = ["security", "supply-chain", "ai-agent", "typosquatting", "slopsquatting", "ebpf", "kernel"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
@@ -22,8 +22,11 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Rust",
+    "Programming Language :: C++",
+    "Programming Language :: C",
     "Topic :: Security",
     "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Operating System Kernels :: Linux",
 ]
 dependencies = [
     "click>=8.1",
@@ -54,9 +57,13 @@ module-name = "aegis.aegis_core"
 features = ["pyo3/extension-module"]
 manifest-path = "crates/aegis-python/Cargo.toml"
 
+[tool.maturin.data]
+scripts = [{ path = "native/build/aegisd", dest = "bin" }]
+
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 pythonpath = ["python"]
+markers = ["ebpf: marks tests requiring eBPF support (deselect with '-m not ebpf')"]
 
 [tool.ruff]
 target-version = "py311"

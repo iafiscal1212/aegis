@@ -78,6 +78,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Build aegisd (Linux only)
+        if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.12'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ pkg-config \
+            libyaml-cpp-dev libsqlite3-dev libcurl4-openssl-dev
+          cd native && mkdir -p build && cd build
+          cmake .. -DAEGIS_ENABLE_BPF=OFF -DAEGIS_ENABLE_TESTS=OFF
+          make -j$(nproc)
       - name: Build wheel
         run: |
           pip install maturin
@@ -86,6 +95,29 @@ jobs:
         with:
           name: wheel-${{ matrix.target }}-py${{ matrix.python-version }}
           path: target/wheels/*.whl
+
+  build-aegisd:
+    name: Build aegisd ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ pkg-config \
+            libyaml-cpp-dev libsqlite3-dev libcurl4-openssl-dev
+      - name: Build aegisd
+        run: |
+          cd native && mkdir -p build && cd build
+          cmake .. -DAEGIS_ENABLE_BPF=OFF -DAEGIS_ENABLE_TESTS=OFF
+          make -j$(nproc)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aegisd-${{ matrix.arch }}
+          path: native/build/aegisd
 
   build-sdist:
     name: Build sdist
@@ -122,3 +154,18 @@ jobs:
         run: |
           pip install maturin
           maturin upload dist/*
+
+  github-release:
+    name: GitHub Release
+    needs: [build-wheels, build-sdist, build-aegisd]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true

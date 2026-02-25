@@ -1,0 +1,38 @@
+# AEGIS v1.0 Configuration
+# This file is loaded by aegisd and the aegis CLI
+
+mode: interactive  # interactive / strict / permissive
+
+ecosystems:
+  python:
+    enabled: true
+  node:
+    enabled: true
+  rust:
+    enabled: true
+
+# Typosquatting detection
+typosquat_enabled: true
+typosquat_threshold: 2
+
+# Agent AI controls
+agent_mode: strict  # strict / moderate / permissive
+agent_typosquat_threshold: 1
+
+# Registry checks
+slopsquat_check: true
+osv_check: true
+registry_cache_ttl: 3600
+
+# Package lists
+allowlist: []
+blocklist: []
+agent_blocklist: []
+agent_allowlist: []
+
+# Kernel enforcement (requires eBPF support)
+kernel:
+  enforce: true
+  protect_credentials: true
+  protect_self: true
+  agent_default_deny: true

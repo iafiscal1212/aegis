@@ -47,3 +47,11 @@ htmlcov/
 
 # Maturin
 *.whl
+
+# Native C++ build
+native/build/
+native/vmlinux/vmlinux_*.h
+!native/vmlinux/README.md
+*.bpf.o
+*.skel.h
+compile_commands.json

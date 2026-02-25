@@ -7,6 +7,46 @@ from aegis.db.models import AegisDB
 from aegis.monitor.process import detect_ai_agent, get_agent_risk_level
 
 
+def _try_daemon(command: str, forced_agent: str | None = None) -> dict | None:
+    """Try to use aegisd daemon for the check. Returns None if unavailable."""
+    try:
+        from aegis.daemon_client import DaemonClient, DaemonError
+        client = DaemonClient()
+        client.connect()
+        try:
+            agent = forced_agent or ""
+            resp = client.check(command, agent=agent)
+            if resp.get("status") == "ok":
+                # Convert daemon response to terminal format
+                alerts = []
+                for msg in resp.get("alerts", []):
+                    # Parse "[LEVEL] pkg: reason" format from daemon
+                    if isinstance(msg, str):
+                        level = "warn"
+                        if msg.startswith("[BLOCK]"):
+                            level = "block"
+                        elif msg.startswith("[WARN]"):
+                            level = "warn"
+                        alerts.append({
+                            "level": level,
+                            "package": "",
+                            "reason": msg,
+                            "suggestion": "",
+                            "agent": resp.get("agent"),
+                        })
+                    elif isinstance(msg, dict):
+                        alerts.append(msg)
+                return {
+                    "action": resp.get("action", "allow"),
+                    "alerts": alerts,
+                    "agent": resp.get("agent") or forced_agent,
+                }
+        finally:
+            client.close()
+    except Exception:
+        return None  # Daemon not available, fall back to userspace
+
+
 def check_install_command(command: str, forced_agent: str | None = None) -> dict:
     """Check a package install command and return a decision.
 
@@ -20,6 +60,12 @@ def check_install_command(command: str, forced_agent: str | None = None) -> dict
             alerts: list of alert dicts
             agent: str | None — detected AI agent name
     """
+    # Try daemon first (kernel-backed enforcement)
+    daemon_result = _try_daemon(command, forced_agent)
+    if daemon_result is not None:
+        return daemon_result
+
+    # Fallback: userspace checks (v0.2.x behavior)
     config = AegisConfig.load_or_create()
     alerts = []
 

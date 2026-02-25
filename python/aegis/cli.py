@@ -190,7 +190,7 @@ def status():
     config_dir = get_config_dir()
     db_path = config_dir / "aegis.db"
 
-    console.print("[bold]AEGIS Status[/bold]\n")
+    console.print("[bold]AEGIS v1.0 Status[/bold]\n")
     console.print(f"  Config dir:  {config_dir}")
     console.print(f"  Initialized: {'[green]yes[/green]' if config_dir.exists() else '[red]no[/red]'}")
     console.print(f"  Database:    {'[green]exists[/green]' if db_path.exists() else '[red]missing[/red]'}")
@@ -205,6 +205,27 @@ def status():
         console.print("  Rust core:   [green]loaded[/green]")
     except ImportError:
         console.print("  Rust core:   [yellow]not available (pure Python fallback)[/yellow]")
+
+    # Check daemon
+    try:
+        from aegis.daemon_client import DaemonClient
+        client = DaemonClient()
+        resp = client.status()
+        if resp.get("status") == "ok":
+            bpf = resp.get("bpf", "unavailable")
+            bpf_color = "green" if bpf == "active" else "yellow"
+            console.print(f"  Daemon:      [green]running[/green] (v{resp.get('version', '?')})")
+            console.print(f"  eBPF:        [{bpf_color}]{bpf}[/{bpf_color}]")
+            console.print(f"  Mode:        {resp.get('mode', '?')}")
+            agents = resp.get("agents", [])
+            if agents:
+                agent_names = ", ".join(f"{a['name']} (PID {a['pid']})" for a in agents)
+                console.print(f"  AI Agents:   {agent_names}")
+        else:
+            console.print("  Daemon:      [yellow]not responding[/yellow]")
+        client.close()
+    except Exception:
+        console.print("  Daemon:      [dim]not running[/dim]")
 
     # DB stats
     if db_path.exists():
@@ -345,6 +366,105 @@ def agent_log(agent: str | None, stats: bool, limit: int):
         )
 
     console.print(table)
+
+
+@main.group()
+def daemon():
+    """Manage aegisd kernel daemon."""
+
+
+@daemon.command("install")
+@click.option("--force", is_flag=True, help="Overwrite existing installation")
+def daemon_install(force: bool):
+    """Install aegisd binary and systemd service (requires root)."""
+    from aegis.daemon_install import install
+    if not install(force=force):
+        sys.exit(1)
+
+
+@daemon.command("uninstall")
+def daemon_uninstall():
+    """Remove aegisd daemon (requires root)."""
+    from aegis.daemon_install import uninstall
+    if not uninstall():
+        sys.exit(1)
+
+
+@daemon.command("start")
+def daemon_start():
+    """Start aegisd via systemctl."""
+    import subprocess
+    result = subprocess.run(["systemctl", "start", "aegisd"], capture_output=True, text=True)
+    if result.returncode == 0:
+        console.print("[green]aegisd started[/green]")
+    else:
+        err_console.print(f"[red]Failed:[/red] {result.stderr.strip()}")
+        sys.exit(1)
+
+
+@daemon.command("stop")
+def daemon_stop():
+    """Stop aegisd via systemctl."""
+    import subprocess
+    result = subprocess.run(["systemctl", "stop", "aegisd"], capture_output=True, text=True)
+    if result.returncode == 0:
+        console.print("[yellow]aegisd stopped[/yellow]")
+    else:
+        err_console.print(f"[red]Failed:[/red] {result.stderr.strip()}")
+        sys.exit(1)
+
+
+@daemon.command("status")
+def daemon_status():
+    """Show aegisd daemon status."""
+    try:
+        from aegis.daemon_client import DaemonClient
+        client = DaemonClient()
+        resp = client.status()
+        client.close()
+
+        if resp.get("status") != "ok":
+            console.print("[red]Daemon returned error[/red]")
+            sys.exit(1)
+
+        console.print("[bold]aegisd status[/bold]\n")
+        console.print(f"  Version: {resp.get('version', '?')}")
+        console.print(f"  Mode:    {resp.get('mode', '?')}")
+
+        bpf = resp.get("bpf", "unavailable")
+        bpf_color = "green" if bpf == "active" else "yellow"
+        console.print(f"  eBPF:    [{bpf_color}]{bpf}[/{bpf_color}]")
+
+        console.print(f"\n  Packages:  {resp.get('packages', 0)}")
+        console.print(f"  Decisions: {resp.get('decisions', 0)}")
+        console.print(f"  Blocked:   {resp.get('blocked', 0)}")
+
+        agents = resp.get("agents", [])
+        if agents:
+            console.print("\n  [bold]Detected AI Agents:[/bold]")
+            for a in agents:
+                console.print(f"    {a['name']} (PID {a['pid']})")
+    except Exception as e:
+        console.print(f"[red]Cannot connect to aegisd:[/red] {e}")
+        console.print("[dim]Is the daemon running? Try: aegis daemon start[/dim]")
+        sys.exit(1)
+
+
+@daemon.command("reload")
+def daemon_reload():
+    """Reload daemon configuration (SIGHUP)."""
+    try:
+        from aegis.daemon_client import DaemonClient
+        client = DaemonClient()
+        resp = client.reload_config()
+        client.close()
+        if resp.get("status") == "ok":
+            console.print("[green]Configuration reloaded[/green]")
+        else:
+            console.print(f"[red]Reload failed:[/red] {resp.get('message', '?')}")
+    except Exception as e:
+        console.print(f"[red]Cannot connect to aegisd:[/red] {e}")
+        sys.exit(1)
 
 
 @main.group()
