@@ -78,15 +78,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
-      - name: Build aegisd (Linux only)
-        if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.12'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake g++ pkg-config \
-            libyaml-cpp-dev libsqlite3-dev libcurl4-openssl-dev
-          cd native && mkdir -p build && cd build
-          cmake .. -DAEGIS_ENABLE_BPF=OFF -DAEGIS_ENABLE_TESTS=OFF
-          make -j$(nproc)
       - name: Build wheel
         run: |
           pip install maturin
@@ -97,11 +88,8 @@ jobs:
           path: target/wheels/*.whl
 
   build-aegisd:
-    name: Build aegisd ${{ matrix.arch }}
+    name: Build aegisd x86_64
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [x86_64, aarch64]
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -116,7 +104,7 @@ jobs:
           make -j$(nproc)
       - uses: actions/upload-artifact@v4
         with:
-          name: aegisd-${{ matrix.arch }}
+          name: aegisd-x86_64
           path: native/build/aegisd
 
   build-sdist:
