@@ -57,9 +57,6 @@ module-name = "aegis.aegis_core"
 features = ["pyo3/extension-module"]
 manifest-path = "crates/aegis-python/Cargo.toml"
 
-[tool.maturin.data]
-scripts = [{ path = "native/build/aegisd", dest = "bin" }]
-
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 pythonpath = ["python"]
